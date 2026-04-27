@@ -1,29 +1,53 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:16-alpine
+    container_name: portfolio-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: portfolio
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-portfolio} -d $${POSTGRES_DB:-portfolio}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: portfolio-api
+    restart: unless-stopped
     environment:
-      APP_ENV: dev
+      APP_ENV: ${APP_ENV:-dev}
       APP_NAME: portfolio-api
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/portfolio
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-portfolio}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    depends_on:
-      - db
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./static:/app/static
+      - ./templates:/app/templates
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
-

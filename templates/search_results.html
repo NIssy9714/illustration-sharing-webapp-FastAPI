@@ -15,21 +15,23 @@
         <article class="card">
             <header>
                 <h2 class="post-title">
-                    <a href="{{ url_for('post', id=post['id']) }}">{{ post['title']|e }}</a>
+                    <a href="/post/{{ post.id }}">{{ post.title|e }}</a>
                 </h2>
             </header>
-            <a href="{{ url_for('post', id=post['id']) }}">
+            {% if post.filename %}
+            <a href="/post/{{ post.id }}">
                 <figure>
                     <img
-                        src="{{ url_for('static', filename=('uploads/thumbs/' + post['filename'])) }}"
+                        src="/static/uploads/thumbs/{{ post.filename }}"
                         loading="lazy"
-                        alt="{{ post['title']|e }} の画像"
-                        onerror="this.onerror=null;this.src='{{ url_for('static', filename=('uploads/' + post['filename'])) }}';"
+                        alt="{{ post.title|e }} の画像"
+                        onerror="this.onerror=null;this.src='/static/uploads/{{ post.filename }}';"
                     >
                 </figure>
             </a>
-            {% if post['body'] %}
-            <p class="post-body">{{ post['body']|e }}</p>
+            {% endif %}
+            {% if post.body %}
+            <p class="post-body">{{ post.body|e }}</p>
             {% endif %}
         </article>
         {% endfor %}
@@ -39,4 +41,3 @@
 </div>
 
 {% endblock %}
-

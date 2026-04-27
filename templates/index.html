@@ -2,28 +2,61 @@
 {% block content %}
 
 <div class="container">
-
     <h2>投稿一覧</h2>
     {% for post in posts %}
     <article class="card">
         <header>
-            <h2 class="post-title"><a href="{{ url_for('post', id=post['id']) }}">{{ post['title']|e }}</a></h2>
+            <h2 class="post-title"><a href="/post/{{ post.id }}">{{ post.title|e }}</a></h2>
         </header>
-        <a href="{{ url_for('post', id=post['id']) }}">
+        {% if post.filename %}
+        <a href="/post/{{ post.id }}">
             <figure>
-                <img src="{{ url_for('static', filename=('uploads/thumbs/' + post['filename'])) }}" loading="lazy" alt="{{ post['title']|e }} の画像" onerror="this.onerror=null;this.src='{{ url_for('static', filename=('uploads/' + post['filename'])) }}';">
+                <img src="/static/uploads/thumbs/{{ post.filename }}" loading="lazy" alt="{{ post.title|e }} の画像"
+                     onerror="this.onerror=null;this.src='/static/uploads/{{ post.filename }}';">
             </figure>
         </a>
-        {% if post['body'] %}
-        <p class="post-body">{{ post['body']|e }}</p>
         {% endif %}
-        {% if current_user.is_authenticated and (current_user.id|int == post['user_id']|int or current_user.username == 'admin') %}
-        <form action="{{ url_for('delete', id=post['id']) }}" method="POST" style="display:inline;" onsubmit="return confirm('本当に削除しますか？');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" style="color: #c00;" aria-label="投稿を削除">削除</button>
-        </form>
+        {% if post.body %}
+        <p class="post-body">{{ post.body|e }}</p>
+        {% endif %}
+        <button class="like-btn" onclick="toggleLike({{ post.id }})">❤ Like</button>
+        <span class="like-count" id="like-count-{{ post.id }}">{{ like_counts[post.id] }} いいね</span>
+        {% if current_user and (current_user.id == post.user_id or current_user.username == 'admin') %}
+        <button class="delete-btn" style="color:#c00;" onclick="deletePost({{ post.id }})">削除</button>
         {% endif %}
     </article>
     {% endfor %}
 </div>
+
+<script>
+async function toggleLike(postId) {
+    const res = await fetch('/posts/' + postId + '/like', {
+        method: 'POST',
+        credentials: 'same-origin'
+    });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('like-count-' + postId).textContent = data.like_count + ' いいね';
+    } else if (res.status === 401) {
+        location.href = '/login';
+    } else {
+        const data = await res.json().catch(() => ({}));
+        alert((typeof data.detail === 'string' && data.detail) || 'いいね失敗');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('本当に削除しますか？')) return;
+    const res = await fetch('/posts/' + postId, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+    });
+    if (res.ok) {
+        location.reload();
+    } else {
+        const data = await res.json().catch(() => ({}));
+        alert((typeof data.detail === 'string' && data.detail) || '削除失敗');
+    }
+}
+</script>
 {% endblock %}

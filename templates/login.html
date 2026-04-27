@@ -1,10 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>ログイン</h2>
-<form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input name="username"><br>
-    <input name="password" type="password"><br>
-    <button>ログイン</button>
+<p id="error-msg" style="color:red;display:none;"></p>
+<form id="login-form">
+    <input name="username" placeholder="ユーザー名" required><br>
+    <input name="password" type="password" placeholder="パスワード" required><br>
+    <button type="submit">ログイン</button>
 </form>
+<script>
+document.getElementById('login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({username: form.username.value, password: form.password.value})
+    });
+    if (res.ok) {
+        location.href = '/';
+    } else {
+        const data = await res.json().catch(() => ({}));
+        const msg = document.getElementById('error-msg');
+        msg.textContent = (typeof data.detail === 'string' && data.detail) || 'ログイン失敗';
+        msg.style.display = '';
+    }
+});
+</script>
 {% endblock %}

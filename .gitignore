@@ -18,6 +18,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.env
 .venv/
 venv/
 ENV/
@@ -26,6 +27,17 @@ env/
 .DS_Store
 *.db
 database.db
+*.bak
 *.log
 node_modules/
-.env
+
+# Claude Code ローカル設定
+.claude/
+
+# アップロード画像（個人物のため除外、.gitkeep のみ追跡）
+static/uploads/*
+!static/uploads/.gitkeep
+!static/uploads/thumbs/
+static/uploads/thumbs/*
+!static/uploads/thumbs/.gitkeep
+

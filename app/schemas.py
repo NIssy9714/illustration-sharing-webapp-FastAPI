@@ -1,0 +1,122 @@
+"""Pydantic スキーマ定義。
+
+API のリクエスト/レスポンスのバリデーションに使用します。
+"""
+
+import re
+from datetime import datetime
+
+from pydantic import BaseModel, Field, field_validator
+
+# ==============================================================================
+# ユーザー関連スキーマ
+# ==============================================================================
+
+
+class UserRegister(BaseModel):
+    """ユーザー登録リクエストスキーマ."""
+
+    username: str = Field(..., min_length=1, max_length=255)
+    password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        """パスワードが半角英数字・記号を1つ以上含むことを検証."""
+        if not re.match(r"^[\x21-\x7E]+$", v):
+            raise ValueError(
+                "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
+            )
+        if not re.search(r"[a-zA-Z0-9]", v):
+            raise ValueError(
+                "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
+            )
+        if not re.search(r"[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]", v):
+            raise ValueError(
+                "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
+            )
+        return v
+
+
+class UserLogin(BaseModel):
+    """ログインリクエストスキーマ."""
+
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    """ユーザー情報レスポンススキーマ."""
+
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
+
+
+# ==============================================================================
+# 投稿関連スキーマ
+# ==============================================================================
+
+
+class PostCreate(BaseModel):
+    """投稿作成リクエストスキーマ."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+    body: str | None = Field(default="", max_length=140)
+
+
+class PostResponse(BaseModel):
+    """投稿レスポンススキーマ."""
+
+    id: int
+    user_id: int
+    title: str
+    filename: str | None = None
+    body: str | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PostWithLikes(PostResponse):
+    """いいね数を含む投稿レスポンススキーマ."""
+
+    like_count: int = 0
+
+
+# ==============================================================================
+# いいね関連スキーマ
+# ==============================================================================
+
+
+class LikeResponse(BaseModel):
+    """いいね操作レスポンススキーマ."""
+
+    liked: bool
+    like_count: int
+
+
+# ==============================================================================
+# 検索関連スキーマ
+# ==============================================================================
+
+
+class SearchResults(BaseModel):
+    """検索結果レスポンススキーマ."""
+
+    search_keyword: str
+    posts: list[PostResponse]
+
+
+# ==============================================================================
+# エラーレスポンススキーマ
+# ==============================================================================
+
+
+class ErrorResponse(BaseModel):
+    """エラーレスポンススキーマ."""
+
+    detail: str

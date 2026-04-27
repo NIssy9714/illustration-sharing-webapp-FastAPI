@@ -4,27 +4,55 @@
 <div class="container">
     <div class="card">
         <header>
-            <h2>{{ post['title']|e }}</h2>
+            <h2>{{ post.title|e }}</h2>
         </header>
+        {% if post.filename %}
         <figure>
-            <img src="{{ url_for('static', filename=('uploads/' + post['filename'])) }}" loading="lazy" alt="{{ post['title']|e }} の画像" onerror="this.onerror=null;this.src='{{ url_for('static', filename=('uploads/' + post['filename'])) }}';">
+            <img src="/static/uploads/{{ post.filename }}" loading="lazy" alt="{{ post.title|e }} の画像">
         </figure>
-        {% if post['body'] %}
-        <p class="post-body">{{ post['body']|e }}</p>
+        {% endif %}
+        {% if post.body %}
+        <p class="post-body">{{ post.body|e }}</p>
         {% endif %}
 
-        <form action="{{ url_for('like', id=post['id']) }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">❤ Like</button>
-        </form>
+        <button id="like-btn" onclick="toggleLike({{ post.id }})">❤ Like</button>
+        <p id="like-count">{{ like_count }} いいね</p>
 
-        <p>{{ like_count }} いいね</p>
-        {% if current_user.is_authenticated and (current_user.id|int == post['user_id']|int or current_user.username == 'admin') %}
-        <form action="{{ url_for('delete', id=post['id']) }}" method="POST" onsubmit="return confirm('本当に削除しますか？');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" style="color: #c00;" aria-label="投稿を削除">削除</button>
-        </form>
+        {% if current_user and (current_user.id == post.user_id or current_user.username == 'admin') %}
+        <button id="delete-btn" style="color:#c00;" onclick="deletePost({{ post.id }})">削除</button>
         {% endif %}
-    <div>
-<div>
+    </div>
+</div>
+
+<script>
+async function toggleLike(postId) {
+    const res = await fetch('/posts/' + postId + '/like', {
+        method: 'POST',
+        credentials: 'same-origin'
+    });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('like-count').textContent = data.like_count + ' いいね';
+    } else if (res.status === 401) {
+        location.href = '/login';
+    } else {
+        const data = await res.json().catch(() => ({}));
+        alert((typeof data.detail === 'string' && data.detail) || 'いいね失敗');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('本当に削除しますか？')) return;
+    const res = await fetch('/posts/' + postId, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+    });
+    if (res.ok) {
+        location.href = '/';
+    } else {
+        const data = await res.json().catch(() => ({}));
+        alert((typeof data.detail === 'string' && data.detail) || '削除失敗');
+    }
+}
+</script>
 {% endblock %}

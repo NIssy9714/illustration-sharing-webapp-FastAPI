@@ -16,10 +16,25 @@ header {
     box-shadow: 0 2px 3px rgba(0,0,0,0.1);
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
 
-header a {
-    margin-right: 15px;
+/* ナビ全体（TOP＋ログイン群／ユーザー群） */
+header .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* ログイン前/ログイン後グループも内部間隔を統一 */
+header .nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+}
+
+header a,
+header #nav-username {
     text-decoration: none;
     color: #333;
     font-weight: bold;
@@ -66,8 +81,21 @@ header a:hover {
     color: #333;
 }
 
+/* 投稿画像のラッパー（リンク・figure）。
+   <a> のデフォルト inline 性質と <figure> のデフォルト margin で
+   画像が表示されない/潰れる問題が出ていたためここで明示する。 */
+.card a {
+    display: block;
+}
+
+.card figure {
+    margin: 0;
+    padding: 0;
+}
+
 /* 投稿画像 */
-.card img {
+.card img,
+.card figure img {
     display: block;
     margin: 0 auto;       /* 中央寄せ */
     width: 100%;          /* カード幅いっぱいに拡大 */
@@ -75,6 +103,7 @@ header a:hover {
     max-height: 600px;    /* 高さの上限を設定して縦長画像を抑制 */
     border-radius: 8px;
     object-fit: cover;    /* 縦長や横長でも枠いっぱいに表示 */
+    background: #f3f3f3;  /* 読み込み中の空枠を可視化 */
 }
 
 /* ボタン（いいねなど） */

@@ -1,28 +1,40 @@
-Flask==2.3.3
-Flask-Login==0.6.3
-Flask-WTF==1.1.1
-Jinja2==3.1.6
-MarkupSafe==3.0.3
-Werkzeug==2.3.7
-blinker==1.9.0
-click==8.3.1
-itsdangerous==2.2.0
-
-Pillow==12.0.0
-
 # FastAPI stack
 fastapi==0.115.12
 uvicorn[standard]==0.34.2
+pydantic==2.10.0
 pydantic-settings==2.9.1
 
-# DB / migrations
+# Database
 SQLAlchemy==2.0.44
 alembic==1.15.2
-psycopg[binary]==3.2.9
 greenlet==3.2.4
 typing_extensions==4.15.0
+# PostgreSQL ドライバ。SQLite 利用時は使われないが、本番想定で同梱
+psycopg[binary]==3.2.3
 
-# Test
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt<4
+python-multipart==0.0.6
+PyJWT==2.9.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Image processing
+Pillow==12.0.0
+
+# Logging & monitoring
+structlog==24.4.0
+sentry-sdk[fastapi]==2.18.0
+
+# Testing
 pytest==8.4.2
+pytest-cov==5.0.0
 httpx==0.28.1
 
+# Development
+python-dotenv==1.0.1
+ruff==0.7.4
+mypy==1.13.0

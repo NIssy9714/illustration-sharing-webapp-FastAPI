@@ -1,10 +1,78 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>新規登録</h2>
-<form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input name="username" placeholder="ユーザー名"><br>
-    <input name="password" type="password" placeholder="パスワード"><br>
-    <button type="submit">登録</button>
+<p id="error-msg" style="color:red;display:none;"></p>
+<form id="register-form">
+    <input name="username" placeholder="ユーザー名" required><br>
+    <input id="password-input" name="password" type="password" placeholder="パスワード（半角英数字・記号、8文字以上）" required><br>
+    <p id="pw-hint" style="color:red;display:none;margin:4px 0;"></p>
+    <button id="submit-btn" type="submit">登録</button>
 </form>
+<script>
+const PW_RULE = /^[\x21-\x7E]{8,}$/;
+const HAS_ALNUM = /[a-zA-Z0-9]/;
+const HAS_SYMBOL = /[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]/;
+const PW_ERROR = 'パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください';
+
+function validatePassword(pw) {
+    return pw.length >= 8 && PW_RULE.test(pw) && HAS_ALNUM.test(pw) && HAS_SYMBOL.test(pw);
+}
+
+const pwInput = document.getElementById('password-input');
+const pwHint = document.getElementById('pw-hint');
+const submitBtn = document.getElementById('submit-btn');
+
+function updatePwHint() {
+    const pw = pwInput.value;
+    if (pw === '') {
+        pwHint.style.display = 'none';
+        submitBtn.disabled = false;
+        return;
+    }
+    if (validatePassword(pw)) {
+        pwHint.style.display = 'none';
+        submitBtn.disabled = false;
+    } else {
+        pwHint.textContent = PW_ERROR;
+        pwHint.style.display = '';
+        submitBtn.disabled = true;
+    }
+}
+
+pwInput.addEventListener('input', updatePwHint);
+
+document.getElementById('register-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const msg = document.getElementById('error-msg');
+    const pw = form.password.value;
+
+    if (!validatePassword(pw)) {
+        pwHint.textContent = PW_ERROR;
+        pwHint.style.display = '';
+        submitBtn.disabled = true;
+        return;
+    }
+
+    const res = await fetch('/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({username: form.username.value, password: pw})
+    });
+    if (res.ok) {
+        location.href = '/';
+        return;
+    }
+    const data = await res.json().catch(() => ({}));
+    let text = '登録失敗';
+    if (typeof data.detail === 'string') {
+        text = data.detail;
+    } else if (Array.isArray(data.detail) && data.detail[0] && data.detail[0].msg) {
+        text = data.detail[0].msg.replace(/^Value error,\s*/, '');
+    }
+    msg.textContent = text;
+    msg.style.display = '';
+});
+</script>
 {% endblock %}

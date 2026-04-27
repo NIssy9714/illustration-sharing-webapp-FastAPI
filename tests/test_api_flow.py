@@ -1,63 +1,96 @@
-def test_healthz(client):
-    r = client.get("/healthz")
+def test_health(client):
+    r = client.get("/health")
     assert r.status_code == 200
-    data = r.json()
-    assert data["status"] == "ok"
+    assert r.json()["status"] == "ok"
 
 
 def test_register_login_create_like_delete_flow(client):
-    # register
-    r = client.post("/auth/register", json={"username": "u1", "password": "password123"})
+    # 登録（成功時にトークンを返しつつ Cookie もセット）
+    r = client.post(
+        "/auth/register",
+        json={"username": "u1", "password": "password123!"},
+    )
     assert r.status_code == 201
-    user = r.json()
-    assert user["username"] == "u1"
+    body = r.json()
+    assert body["user"]["username"] == "u1"
+    assert "access_token" in body
+    # Cookie に保存されていること
+    assert client.cookies.get("access_token") is not None
 
-    # login
-    r = client.post("/auth/login", json={"username": "u1", "password": "password123"})
+    # ログイン（Cookie が更新される）
+    r = client.post(
+        "/auth/login",
+        json={"username": "u1", "password": "password123!"},
+    )
     assert r.status_code == 200
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # create post
+    # 投稿作成（Form data。Cookie 認証で OK）
     r = client.post(
-        "/posts",
-        json={"title": "hello", "body": "body", "filename": None},
-        headers=headers,
+        "/posts/",
+        data={"title": "hello", "body": "body"},
     )
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     post = r.json()
     post_id = post["id"]
     assert post["title"] == "hello"
 
-    # list posts
-    r = client.get("/posts")
+    # 投稿一覧
+    r = client.get("/posts/")
     assert r.status_code == 200
     assert any(p["id"] == post_id for p in r.json())
 
-    # toggle like on
-    r = client.post(f"/posts/{post_id}/likes/toggle", headers=headers)
+    # いいね ON（Bearer 互換も検証）
+    r = client.post(f"/posts/{post_id}/like", headers=headers)
     assert r.status_code == 200
     data = r.json()
     assert data["liked"] is True
     assert data["like_count"] == 1
 
-    # toggle like off
-    r = client.post(f"/posts/{post_id}/likes/toggle", headers=headers)
+    # いいね OFF
+    r = client.post(f"/posts/{post_id}/like", headers=headers)
     assert r.status_code == 200
     data = r.json()
     assert data["liked"] is False
     assert data["like_count"] == 0
 
-    # delete post
-    r = client.delete(f"/posts/{post_id}", headers=headers)
+    # 削除（Cookie 認証）
+    r = client.delete(f"/posts/{post_id}")
     assert r.status_code == 204
 
-    # get post -> 404
+    # 削除後 → 404
     r = client.get(f"/posts/{post_id}")
     assert r.status_code == 404
 
+    # ログアウトで Cookie が消える
+    r = client.post("/auth/logout")
+    assert r.status_code == 200
+
 
 def test_auth_required(client):
-    r = client.post("/posts", json={"title": "x", "body": None, "filename": None})
+    # Cookie もヘッダもなしで投稿作成 → 401
+    fresh = client.__class__(client.app)
+    r = fresh.post("/posts/", data={"title": "x"})
     assert r.status_code == 401
 
+
+def test_like_unique_constraint(client):
+    """同一ユーザー × 同一投稿のいいねが重複登録されないこと."""
+    fresh = client.__class__(client.app)
+    fresh.post(
+        "/auth/register",
+        json={"username": "uniq_user", "password": "password123!"},
+    )
+    r = fresh.post("/posts/", data={"title": "p", "body": ""})
+    assert r.status_code == 201
+    post_id = r.json()["id"]
+
+    # いいね ON → OFF → ON → OFF が正しく往復する（DB 整合）
+    states = []
+    for _ in range(4):
+        r = fresh.post(f"/posts/{post_id}/like")
+        assert r.status_code == 200
+        states.append(r.json())
+    assert [s["liked"] for s in states] == [True, False, True, False]
+    assert [s["like_count"] for s in states] == [1, 0, 1, 0]

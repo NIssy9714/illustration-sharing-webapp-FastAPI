@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>投稿</h2>
-<form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if not current_user %}
+<p>投稿するには <a href="/login">ログイン</a> が必要です。</p>
+{% else %}
+<p id="error-msg" style="color:red;display:none;"></p>
+<form id="upload-form">
     <label>
         タイトル
-        <input name="title" placeholder="タイトル" required>
+        <input name="title" placeholder="タイトル" required maxlength="255">
     </label>
     <br>
     <label>
@@ -20,4 +23,35 @@
     <br>
     <button type="submit">投稿する</button>
 </form>
+<script>
+document.getElementById('upload-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const fd = new FormData();
+    fd.append('title', form.title.value);
+    fd.append('body', form.body.value);
+    const imageFile = form.image.files[0];
+    if (imageFile) {
+        fd.append('image', imageFile);
+    }
+    const res = await fetch('/posts/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: fd
+    });
+    if (res.ok) {
+        location.href = '/';
+        return;
+    }
+    if (res.status === 401) {
+        location.href = '/login';
+        return;
+    }
+    const data = await res.json().catch(() => ({}));
+    const msg = document.getElementById('error-msg');
+    msg.textContent = (typeof data.detail === 'string' && data.detail) || '投稿失敗';
+    msg.style.display = '';
+});
+</script>
+{% endif %}
 {% endblock %}

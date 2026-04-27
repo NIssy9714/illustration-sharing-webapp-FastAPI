@@ -8,22 +8,24 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+# プロジェクトルートを import パスに追加
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# settings 読込前に環境変数を確定
+os.environ.setdefault("SECRET_KEY", "test-secret")
+os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("ALLOWED_ORIGINS", "http://testserver")
+
 
 @pytest.fixture(scope="session")
 def client():
-    # Ensure repo root is importable (so `import fastapi_app` works)
-    repo_root = Path(__file__).resolve().parents[1]
-    sys.path.insert(0, str(repo_root))
+    from app.core.limiter import limiter
+    from app.db import Base, get_db
+    from app.main import app
 
-    # Ensure required env vars exist for Settings()
-    os.environ.setdefault("APP_ENV", "test")
-    os.environ.setdefault("APP_NAME", "portfolio-api-test")
-    os.environ.setdefault("SECRET_KEY", "test-secret")
-    os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
-
-    from fastapi_app.app.db.base import Base
-    from fastapi_app.app.db.session import get_db
-    from fastapi_app.app.main import create_app
+    # テスト中はレート制限を無効化（同一クライアントから連発するため）
+    limiter.enabled = False
 
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
@@ -40,7 +42,5 @@ def client():
         finally:
             db.close()
 
-    app = create_app()
     app.dependency_overrides[get_db] = override_get_db
     return TestClient(app)
-
