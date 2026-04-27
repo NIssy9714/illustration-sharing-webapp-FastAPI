@@ -1,19 +1,19 @@
 # ポートフォリオ API
 
-FastAPI ベースのポートフォリオ投稿アプリケーション。
+FastAPI ベースのイラスト投稿アプリケーション。
 
 ---
 
 ## 概要
 
-本プロジェクトはシンプルなポートフォリオ投稿 REST API です。
-FastAPI と SQLAlchemy を使用した実務寄りの構成になっています。
+シンプルな投稿型ポートフォリオの REST API + サーバーサイドレンダリング画面。
+FastAPI / SQLAlchemy 2.x / Alembic / Pydantic v2 を中心とした、実務寄りの構成で構築している。
 
 ### 主な機能
 
 - **ユーザー認証**: JWT を **HttpOnly Cookie** に格納（`Authorization: Bearer` 互換）
 - **投稿管理**: CRUD 操作（作成・一覧・詳細・削除）
-- **画像処理**: Pillow を使用した検証＋サムネイル生成
+- **画像処理**: Pillow を使った検証＋サムネイル自動生成
 - **いいね機能**: `UNIQUE(user_id, post_id)` 制約で重複登録を防止したトグル
 - **検索機能**: タイトルによる投稿検索
 - **レート制限**: `slowapi` で `/auth/*`・`/posts/*` を IP 単位で制限
@@ -49,21 +49,28 @@ portfolio_fastapi/
 │   ├── image_service.py     # 画像処理ユーティリティ
 │   ├── generate_thumbs.py   # サムネイル一括生成スクリプト
 │   ├── core/
-│   │   └── __init__.py
+│   │   ├── config.py        # 設定（pydantic-settings）
+│   │   ├── limiter.py       # slowapi レート制限
+│   │   ├── logging.py       # structlog 設定
+│   │   └── migrate.py       # 起動時 Alembic 実行
 │   └── routers/
-│       ├── __init__.py
 │       ├── auth.py          # 認証エンドポイント
 │       ├── posts.py         # 投稿エンドポイント
 │       └── search.py        # 検索エンドポイント
-├── main.py                  # アプリケーション起動スクリプト
-├── requirements.txt         # 依存パッケージ
-├── .env                     # 環境変数設定
+├── alembic/                 # マイグレーションスクリプト
+│   ├── env.py
+│   └── versions/
+├── alembic.ini
+├── flask_legacy/            # 旧 Flask 実装（参考用、実行はされない）
+├── templates/               # Jinja2 テンプレート（SSR ページ）
+├── static/                  # CSS・アップロード画像（uploads/・thumbs/）
+├── tests/                   # pytest 統合テスト
+├── main.py                  # アプリ起動スクリプト（uvicorn ラッパー）
+├── pyproject.toml
+├── requirements.txt
 ├── .env.example             # 環境変数テンプレート
-├── database.db              # SQLite データベース（自動生成）
-├── static/                  # 画像・CSS などの静的ファイル
-├── templates/               # HTML テンプレート（HTML UI 用）
-├── docker-compose.yml       # Docker Compose 設定
-├── Dockerfile               # Docker イメージ定義
+├── docker-compose.yml       # api + db（PostgreSQL 16）
+├── Dockerfile
 └── README.md
 ```
 
@@ -81,8 +88,8 @@ portfolio_fastapi/
 1. リポジトリをクローン
 
 ```bash
-git clone <repository-url>
-cd portfolio_fastapi
+git clone https://github.com/NIssy9714/illustration-sharing-webapp-FastAPI.git
+cd illustration-sharing-webapp-FastAPI
 ```
 
 2. 仮想環境を作成・有効化
@@ -101,17 +108,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. 環境変数を設定（.env を編集）
+4. 環境変数を設定
 
 ```bash
 cp .env.example .env
+# .env を開いて SECRET_KEY などを編集（実値はコミットしない）
 ```
 
 ---
 
 ## 使用方法
 
-### API サーバー起動
+### サーバー起動
 
 ```bash
 python main.py
@@ -123,7 +131,18 @@ python main.py
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-サーバーは `http://localhost:8000` で起動します。
+サーバーは `http://localhost:8000` で起動する。
+
+### 画面（SSR）
+
+| パス | 内容 |
+|------|------|
+| `/` | 投稿一覧 |
+| `/login` / `/register` | ログイン・登録 |
+| `/upload` | 投稿作成 |
+| `/post/{id}` | 投稿詳細 |
+| `/search` | 検索結果 |
+| `/health` | ヘルスチェック |
 
 ### API ドキュメント
 
@@ -134,36 +153,50 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## API エンドポイント
 
-### 認証関連
+### 認証
 
-| メソッド | エンドポイント | 説明 |
-|---------|---------------|------|
+| メソッド | パス | 説明 |
+|---------|------|------|
 | POST | `/auth/register` | ユーザー登録 |
-| POST | `/auth/login` | ログイン |
-| POST | `/auth/logout` | ログアウト |
+| POST | `/auth/login` | ログイン（JWT 発行 → Cookie + レスポンス本文） |
+| POST | `/auth/logout` | ログアウト（Cookie 削除） |
 
-### 投稿関連
+### 投稿
 
-| メソッド | エンドポイント | 説明 |
-|---------|---------------|------|
+| メソッド | パス | 説明 |
+|---------|------|------|
 | GET | `/posts/` | 投稿一覧取得 |
 | POST | `/posts/` | 投稿作成（画像アップロード） |
 | GET | `/posts/{post_id}` | 投稿詳細取得 |
 | DELETE | `/posts/{post_id}` | 投稿削除 |
-| POST | `/posts/{post_id}/like` | いいねをトグル |
+| POST | `/posts/{post_id}/like` | いいねトグル |
 
-### 検索関連
+### 検索
 
-| メソッド | エンドポイント | 説明 |
-|---------|---------------|------|
-| GET | `/search?query=...` | 投稿を検索 |
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/search?query=...` | 投稿をタイトル検索 |
+
+### サンプルリクエスト
+
+```bash
+# ユーザー登録
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"password123"}'
+
+# ログイン（access_token を Cookie・レスポンス両方で受け取る）
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"password123"}'
+```
 
 ---
 
 ## 認証フロー
 
 JWT（JSON Web Token）ベースのステートレス認証。
-保存方法は **HttpOnly Cookie が主** で、`Authorization: Bearer` も互換のため受け付ける。
+保存方法は **HttpOnly Cookie が主**で、`Authorization: Bearer` も互換のため受け付ける。
 
 1. `/auth/login` でログイン
 2. サーバーが JWT を発行し、`access_token` Cookie（HttpOnly / SameSite=Lax）にセット。
@@ -183,7 +216,7 @@ JWT（JSON Web Token）ベースのステートレス認証。
 
 ## データベーススキーマ
 
-### users テーブル
+### users
 
 ```sql
 CREATE TABLE users (
@@ -193,7 +226,7 @@ CREATE TABLE users (
 )
 ```
 
-### posts テーブル
+### posts
 
 ```sql
 CREATE TABLE posts (
@@ -206,7 +239,7 @@ CREATE TABLE posts (
 )
 ```
 
-### likes テーブル
+### likes
 
 ```sql
 CREATE TABLE likes (
@@ -221,9 +254,7 @@ CREATE TABLE likes (
 
 ---
 
-## 開発時の注意点
-
-### 環境変数
+## 環境変数
 
 `.env.example` をコピーして `.env` を作成し編集する：
 
@@ -239,7 +270,9 @@ CREATE TABLE likes (
 
 本番環境では `SECRET_KEY` がデフォルト値だと起動が拒否される（lifespan 内でガード）。
 
-### データベースマイグレーション
+---
+
+## マイグレーション
 
 アプリ起動時の lifespan で `alembic upgrade head` を自動実行する
 （`APP_ENV=test` ではテスト側がスキーマを直接作成するためスキップ）。
@@ -247,9 +280,9 @@ CREATE TABLE likes (
 手動実行：
 
 ```bash
-alembic upgrade head            # 最新へ
-alembic downgrade -1            # 1 つ戻す
-alembic revision --autogenerate -m "msg"  # モデル変更から雛形を生成
+alembic upgrade head                       # 最新へ
+alembic downgrade -1                       # 1 つ戻す
+alembic revision --autogenerate -m "msg"   # モデル変更から雛形を生成
 ```
 
 ---
@@ -266,27 +299,48 @@ docker compose up --build
 
 - API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
+- ヘルスチェック: `http://localhost:8000/health`
 - DB（ホスト側ポート公開時）: `postgresql://portfolio:***@localhost:5432/portfolio`
 
 ---
 
 ## テスト
 
+統合テストはインメモリ SQLite を使用し、登録 → ログイン → 投稿 → いいね → 削除の API フローを検証する。
+
 ```bash
-pytest
+pytest          # フル
+pytest -q       # 簡易出力
 ```
 
 ---
 
 ## レガシーコード
 
-古い Flask 実装は `flask_legacy/` フォルダに保存されています。
+旧 Flask 実装は `flask_legacy/` に保存されている（実行されない参考用）。
 
 ---
 
-## ライセンス
+## 設計方針
 
-MIT
+1. まず動く状態にしてから責務を分離する
+2. フレームワークの "魔法" を追いかけすぎず、処理の流れを自分で追えるようにする
+3. コメント・ドキュメントを充実させ、第三者が理解しやすい状態を保つ
+
+---
+
+## 今後の改善案（TODO）
+
+- 管理者権限の明確化（ロールごとのアクセス制御）
+- フロントエンドの SPA 化（現状は Jinja2 SSR）
+- E2E テスト導入（現状は API 統合テストのみ）
+- 画像配信を CDN / S3 互換ストレージへ切り出し
+
+---
+
+## 注意事項
+
+本リポジトリは **学習目的** であり、そのまま本番環境で利用することは想定していない。
 
 ---
 
@@ -295,141 +349,10 @@ MIT
 - [FastAPI 公式ドキュメント](https://fastapi.tiangolo.com/)
 - [SQLAlchemy 公式ドキュメント](https://docs.sqlalchemy.org/)
 - [Pydantic 公式ドキュメント](https://docs.pydantic.dev/)
-- **SQLite** … 学習用途（`database.db` 生成）
-- **Pillow** … 画像検証・サムネイル生成
+- [Alembic 公式ドキュメント](https://alembic.sqlalchemy.org/)
 
 ---
 
-## ディレクトリ構成（Structure）
+## ライセンス
 
-```
-.
-├── app.py              # エントリーポイント：Flask アプリ生成・ルート登録・DB 初期化
-├── auth.py             # 認証処理（登録・ログイン・ログアウト）
-├── db.py               # SQLite 接続管理・スキーマ生成・マイグレーション
-├── routes.py           # 投稿・いいね・削除などのビジネスロジック
-├── search.py           # 検索機能処理
-├── image_service.py    # 画像アップロードとサムネイル生成
-├── requirements.txt    # 依存パッケージ
-├── database.db         # SQLite DB（実行時に生成される場合あり）
-├── templates/          # HTML テンプレート（Jinja2）
-└── static/             # CSS・アップロード画像（uploads/・thumbs/）
-```
-
----
-
-## 使い方
-
-1. 依存パッケージをインストールする
-
-```bash
-pip install -r requirements.txt
-```
-
-2. Flask 版アプリを起動する
-
-```bash
-python app.py
-```
-
-3. ブラウザで `http://localhost:5000/` にアクセスする
-
----
-
-## FastAPI 版（実務寄り構成）
-
-このリポジトリには、**環境変数で設定を管理**し、**PostgreSQL を前提**にした FastAPI 版（`fastapi_app/`）も同梱しています。
-APIキーやパスワード等をコード内に直書きせず、`.env` で注入する前提です。
-
-### 事前準備
-
-- `.env.example` をコピーして `.env` を作成し、値を設定してください（**実値はコミットしない**）
-
-### Docker で起動（おすすめ）
-
-※ Docker がインストールされている環境が必要です。
-
-```bash
-docker compose up --build
-```
-
-- API: `http://localhost:8000`
-- ヘルスチェック: `http://localhost:8000/healthz`
-- Swagger UI: `http://localhost:8000/docs`
-
-### ローカル起動（Dockerなし）
-
-```bash
-pip install -r requirements.txt
-uvicorn fastapi_app.app.main:app --reload --port 8000
-```
-
-### マイグレーション（Alembic）
-
-このリポジトリには **初回マイグレーション**（`fastapi_app/migrations/versions/0001_init.py`）を同梱しています。
-PostgreSQL を用意して `DATABASE_URL` を設定したうえで、次を実行してください。
-
-```bash
-alembic -c fastapi_app/alembic.ini upgrade head
-```
-
-（参考）モデルから自動生成したい場合（DBへ接続できる状態が必要）:
-
-```bash
-alembic -c fastapi_app/alembic.ini revision --autogenerate -m "init"
-alembic -c fastapi_app/alembic.ini upgrade head
-```
-
-### 認証API（最低限）
-
-- `POST /auth/register` : ユーザー作成
-- `POST /auth/login` : トークン発行（Bearer）
-
-例:
-
-```bash
-curl -X POST http://localhost:8000/auth/register ^
-  -H "Content-Type: application/json" ^
-  -d "{\"username\":\"test\",\"password\":\"password123\"}"
-```
-
-```bash
-curl -X POST http://localhost:8000/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"username\":\"test\",\"password\":\"password123\"}"
-```
-
----
-
-## テスト（pytest）
-
-FastAPI 版のAPIフロー（登録→ログイン→投稿→いいね→削除）を、SQLiteインメモリDBで自動テストします。
-
-```bash
-pip install -r requirements.txt
-pytest -q
-```
-
----
-
-## 設計方針（Design Policy）
-
-1. まず動く状態にしてから責務を分離する
-2. フレームワークの“魔法”を追いかけすぎず、処理の流れを自分で追えるようにする
-3. コメントやドキュメントを充実させ、第三者が理解しやすい状態を保つ
-
----
-
-## 今後の改善案（TODO）
-
-- 管理者権限の明確化（ロールごとのアクセス制御）
-- 本番環境用設定の分離（環境ごとの設定ファイルなど）
-- セキュリティ強化（セッション管理、入力バリデーション、CSRF など）
-- テスト自動化（ユニットテスト・統合テスト）
-
----
-
-## 注意事項
-
-本リポジトリは**学習目的**であり、
-そのまま本番環境で利用することを想定していません。
+MIT
