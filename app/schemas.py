@@ -21,21 +21,21 @@ class UserRegister(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password(cls, v):
+    def validate_password(cls, password):
         """パスワードが半角英数字・記号を1つ以上含むことを検証."""
-        if not re.match(r"^[\x21-\x7E]+$", v):
+        if not re.match(r"^[\x21-\x7E]+$", password):
             raise ValueError(
                 "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
             )
-        if not re.search(r"[a-zA-Z0-9]", v):
+        if not re.search(r"[a-zA-Z0-9]", password):
             raise ValueError(
                 "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
             )
-        if not re.search(r"[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]", v):
+        if not re.search(r"[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]", password):
             raise ValueError(
                 "パスワードは8文字以上・半角英数字・記号を1つ以上含むようにしてください",
             )
-        return v
+        return password
 
 
 class UserLogin(BaseModel):

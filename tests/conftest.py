@@ -27,20 +27,24 @@ def client():
     # テスト中はレート制限を無効化（同一クライアントから連発するため）
     limiter.enabled = False
 
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
+    TestSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=test_engine,
+    )
+    Base.metadata.create_all(bind=test_engine)
 
     def override_get_db():
-        db = TestingSessionLocal()
+        test_db_session = TestSessionLocal()
         try:
-            yield db
+            yield test_db_session
         finally:
-            db.close()
+            test_db_session.close()
 
     app.dependency_overrides[get_db] = override_get_db
     return TestClient(app)

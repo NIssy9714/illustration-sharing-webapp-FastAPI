@@ -173,17 +173,18 @@ def delete_post(
 
     if post.filename:
         uploads_root = os.path.realpath(os.path.join("static", "uploads"))
-        for path in (
+        target_paths = (
             os.path.join("static", "uploads", post.filename),
             os.path.join("static", "uploads", "thumbs", post.filename),
-        ):
-            real = os.path.realpath(path)
+        )
+        for target_path in target_paths:
+            absolute_path = os.path.realpath(target_path)
             # uploads 配下以外には絶対に触れない（パストラバーサル防御）
-            if not real.startswith(uploads_root):
+            if not absolute_path.startswith(uploads_root):
                 continue
-            if os.path.exists(real):
+            if os.path.exists(absolute_path):
                 try:
-                    os.remove(real)
+                    os.remove(absolute_path)
                 except OSError:
                     pass
 

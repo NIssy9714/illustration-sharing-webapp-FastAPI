@@ -17,14 +17,14 @@ def run_migrations(alembic_ini_path: str) -> None:
     log = get_logger("app.migrate")
     settings = get_settings()
 
-    cfg = Config(alembic_ini_path)
+    alembic_config = Config(alembic_ini_path)
     # script_location を絶対パスで上書きし、cwd 依存をなくす
-    cfg.set_main_option(
+    alembic_config.set_main_option(
         "script_location",
         os.path.join(os.path.dirname(alembic_ini_path), "alembic"),
     )
-    cfg.set_main_option("sqlalchemy.url", settings.database_url)
+    alembic_config.set_main_option("sqlalchemy.url", settings.database_url)
 
     log.info("migrations.start", database_url=settings.database_url)
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg=alembic_config, revision="head")
     log.info("migrations.done")

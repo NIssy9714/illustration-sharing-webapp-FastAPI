@@ -96,34 +96,35 @@ def _decode_token(token: str) -> int:
     """トークンを検証して user_id を返す."""
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-    except jwt.ExpiredSignatureError as e:
+    except jwt.ExpiredSignatureError as expired_error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="トークンの有効期限が切れています",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except jwt.PyJWTError as e:
+        ) from expired_error
+    except jwt.PyJWTError as jwt_error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="トークンが無効です",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
+        ) from jwt_error
 
-    sub = payload.get("sub")
-    if sub is None:
+    # "sub" は JWT 標準のクレーム名。ここではユーザー ID を文字列で格納している
+    subject_user_id = payload.get("sub")
+    if subject_user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="無効なトークンです",
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        return int(sub)
-    except (TypeError, ValueError) as e:
+        return int(subject_user_id)
+    except (TypeError, ValueError) as conversion_error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="無効なトークンです",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
+        ) from conversion_error
 
 
 def _extract_token(
@@ -215,12 +216,12 @@ def register(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-    except IntegrityError as e:
+    except IntegrityError as integrity_error:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="ユーザー登録に失敗しました",
-        ) from e
+        ) from integrity_error
 
     token = _issue_token_for(new_user)
     _set_auth_cookie(response, token)

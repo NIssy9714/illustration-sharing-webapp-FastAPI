@@ -118,7 +118,8 @@ app.include_router(search.router)
 # ==============================================================================
 
 
-def _user_ctx(user) -> dict:
+def _build_user_context(user) -> dict:
+    """テンプレートに渡す current_user 情報を組み立てる."""
     if user is None:
         return {"current_user": None}
     return {"current_user": {"id": user.id, "username": user.username}}
@@ -130,17 +131,18 @@ def index(
     db: Session = Depends(get_db),
     current_user=Depends(get_optional_user),
 ):
-    posts_list = db.query(Post).order_by(desc(Post.created_at)).all()
+    posts = db.query(Post).order_by(desc(Post.created_at)).all()
     like_counts = {
-        p.id: db.query(Like).filter(Like.post_id == p.id).count() for p in posts_list
+        post.id: db.query(Like).filter(Like.post_id == post.id).count()
+        for post in posts
     }
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "posts": posts_list,
+            "posts": posts,
             "like_counts": like_counts,
-            **_user_ctx(current_user),
+            **_build_user_context(current_user),
         },
     )
 
@@ -149,7 +151,7 @@ def index(
 def login_page(request: Request, current_user=Depends(get_optional_user)):
     return templates.TemplateResponse(
         "login.html",
-        {"request": request, **_user_ctx(current_user)},
+        {"request": request, **_build_user_context(current_user)},
     )
 
 
@@ -157,7 +159,7 @@ def login_page(request: Request, current_user=Depends(get_optional_user)):
 def register_page(request: Request, current_user=Depends(get_optional_user)):
     return templates.TemplateResponse(
         "register.html",
-        {"request": request, **_user_ctx(current_user)},
+        {"request": request, **_build_user_context(current_user)},
     )
 
 
@@ -165,7 +167,7 @@ def register_page(request: Request, current_user=Depends(get_optional_user)):
 def upload_page(request: Request, current_user=Depends(get_optional_user)):
     return templates.TemplateResponse(
         "upload.html",
-        {"request": request, **_user_ctx(current_user)},
+        {"request": request, **_build_user_context(current_user)},
     )
 
 
@@ -176,10 +178,10 @@ def search_page(
     db: Session = Depends(get_db),
     current_user=Depends(get_optional_user),
 ):
-    keyword = search_query.strip()[:100]
-    posts_list = (
+    search_keyword = search_query.strip()[:100]
+    posts = (
         db.query(Post)
-        .filter(Post.title.ilike(f"%{keyword}%"))
+        .filter(Post.title.ilike(f"%{search_keyword}%"))
         .order_by(desc(Post.created_at))
         .all()
     )
@@ -187,9 +189,9 @@ def search_page(
         "search_results.html",
         {
             "request": request,
-            "posts": posts_list,
-            "search_keyword": keyword,
-            **_user_ctx(current_user),
+            "posts": posts,
+            "search_keyword": search_keyword,
+            **_build_user_context(current_user),
         },
     )
 
@@ -211,7 +213,7 @@ def post_page(
             "request": request,
             "post": post,
             "like_count": like_count,
-            **_user_ctx(current_user),
+            **_build_user_context(current_user),
         },
     )
 
@@ -228,17 +230,17 @@ def health_check():
 
 
 @app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request, exc):
-    return await http_exception_handler(request, exc)
+async def custom_http_exception_handler(request, exception):
+    return await http_exception_handler(request, exception)
 
 
 @app.exception_handler(RequestValidationError)
-async def custom_validation_exception_handler(request, exc):
-    return await request_validation_exception_handler(request, exc)
+async def custom_validation_exception_handler(request, exception):
+    return await request_validation_exception_handler(request, exception)
 
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
+async def general_exception_handler(request, exception):
     log = get_logger("app.unhandled")
     log.exception("unhandled_exception", path=str(request.url))
     return JSONResponse(

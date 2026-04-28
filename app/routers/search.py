@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db import Post, get_db
 from app.schemas import SearchResults
 
-router = APIRouter(prefix="/search", tags=["search"])
+router = APIRouter(prefix="/api/search", tags=["search"])
 
 
 @router.get("", response_model=SearchResults)

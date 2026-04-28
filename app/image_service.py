@@ -80,11 +80,11 @@ def create_thumbnail(
     """指定サイズのサムネイルを生成し、保存先パスを返す."""
     os.makedirs(thumbnail_dir, exist_ok=True)
     thumbnail_path = os.path.join(thumbnail_dir, filename)
-    thumb = image.copy()
-    thumb.thumbnail(size)
-    if thumb.mode in ("RGBA", "P"):
-        thumb = thumb.convert("RGB")
-    thumb.save(thumbnail_path)
+    thumbnail_image = image.copy()
+    thumbnail_image.thumbnail(size)
+    if thumbnail_image.mode in ("RGBA", "P"):
+        thumbnail_image = thumbnail_image.convert("RGB")
+    thumbnail_image.save(thumbnail_path)
     return thumbnail_path
 
 
@@ -118,44 +118,57 @@ def process_uploaded_image(
     if not (mimetype and mimetype.startswith("image/")):
         return None, "画像ファイルをアップロードしてください"
 
-    safe_name = _secure_filename(filename_original)
-    _, ext = os.path.splitext(safe_name)
-    filename = f"{uuid.uuid4().hex}{ext.lower()}"
+    sanitized_filename = _secure_filename(filename_original)
+    _, file_extension = os.path.splitext(sanitized_filename)
+    filename = f"{uuid.uuid4().hex}{file_extension.lower()}"
     filepath = os.path.join(upload_base_dir, filename)
 
     # FastAPI の UploadFile は .file、Flask の FileStorage は .stream を持つ。両対応。
-    stream = getattr(file_storage, "file", None) or getattr(file_storage, "stream", None)
-    if stream is None:
+    file_stream = getattr(file_storage, "file", None) or getattr(
+        file_storage,
+        "stream",
+        None,
+    )
+    if file_stream is None:
         return None, "有効な画像ファイルをアップロードしてください"
 
     try:
-        image = _verify_image(stream)
-    except Exception as e:
-        log.warning("image.verify_failed", filename=filename_original, error=str(e))
+        image = _verify_image(file_stream)
+    except Exception as exception:
+        log.warning(
+            "image.verify_failed",
+            filename=filename_original,
+            error=str(exception),
+        )
         return None, "有効な画像ファイルをアップロードしてください"
 
-    max_w, max_h = max_dimensions
-    if image.width > max_w or image.height > max_h:
-        return None, f"画像のサイズが大きすぎます（最大 {max_w}x{max_h}）。"
+    max_width, max_height = max_dimensions
+    if image.width > max_width or image.height > max_height:
+        return None, f"画像のサイズが大きすぎます（最大 {max_width}x{max_height}）。"
 
     os.makedirs(upload_base_dir, exist_ok=True)
 
     try:
         _save_image(image, filepath)
-    except Exception as e:
-        log.warning("image.save_failed", filepath=filepath, error=str(e))
+    except Exception as exception:
+        log.warning("image.save_failed", filepath=filepath, error=str(exception))
         return None, "有効な画像ファイルをアップロードしてください"
 
     thumbnail_dir = os.path.join(upload_base_dir, "thumbs")
     try:
-        thumb_path = create_thumbnail(image, thumbnail_dir, filename, thumbnail_size)
-        log.info("thumbnail.created", filename=filename, path=thumb_path)
-    except Exception as e:
+        thumbnail_path = create_thumbnail(
+            image,
+            thumbnail_dir,
+            filename,
+            thumbnail_size,
+        )
+        log.info("thumbnail.created", filename=filename, path=thumbnail_path)
+    except Exception as exception:
         # サムネ失敗は本体表示の onerror フォールバックでカバー。原因は必ずログに残す。
         log.warning(
             "thumbnail.create_failed",
             filename=filename,
-            error=str(e),
+            error=str(exception),
             mode=image.mode,
             size=image.size,
         )
