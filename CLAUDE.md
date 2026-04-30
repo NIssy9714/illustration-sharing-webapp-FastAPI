@@ -27,7 +27,7 @@ python app/generate_thumbs.py           # batch-regenerate thumbnails for existi
 
 ## Architecture
 
-FastAPI REST API for an illustration-sharing web app. Recently migrated from Flask; old code is archived in `flask_legacy/` (not executed, reference only).
+FastAPI REST API for an illustration-sharing web app. Migrated from Flask (legacy code removed).
 
 **Key directories:**
 - `app/` — main application package
@@ -52,7 +52,7 @@ JWT token issued on `POST /auth/login`, passed as `Authorization: Bearer <token>
 
 ## Database
 
-SQLite (`database.db` in project root) created automatically on startup via `Base.metadata.create_all()`. No migrations tool is active — schema changes require manually updating models in `app/db.py` and re-initializing (drop/recreate or manual ALTER). The README mentions Alembic (`fastapi_app/alembic.ini`) as a future path for PostgreSQL.
+PostgreSQL 16 (Docker compose `db` service) is the primary target. SQLite (`database.db` in project root) is the local fallback when `DATABASE_URL` is unset. Alembic is active — schema changes go through `alembic revision --autogenerate -m "msg"` then `alembic upgrade head`. Startup lifespan auto-runs `upgrade head` (skipped when `APP_ENV=test`).
 
 Three tables: `users`, `posts` (FK → users), `likes` (FK → users + posts).
 

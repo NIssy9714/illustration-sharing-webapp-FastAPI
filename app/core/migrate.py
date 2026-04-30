@@ -26,5 +26,5 @@ def run_migrations(alembic_ini_path: str) -> None:
     alembic_config.set_main_option("sqlalchemy.url", settings.database_url)
 
     log.info("migrations.start", database_url=settings.database_url)
-    command.upgrade(cfg=alembic_config, revision="head")
+    command.upgrade(config=alembic_config, revision="head")
     log.info("migrations.done")

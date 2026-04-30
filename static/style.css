@@ -20,17 +20,34 @@ header {
 }
 
 /* ナビ全体（TOP＋ログイン群／ユーザー群） */
+/* 投稿リンクの下にユーザー名を縦積みしてもテキスト行が揃うよう、
+   ベースライン基準で水平整列する */
 header .nav-links {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 15px;
 }
 
-/* ログイン前/ログイン後グループも内部間隔を統一 */
+/* ログイン前/ログイン後グループも内部間隔とベースラインを統一 */
 header .nav-group {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 15px;
+}
+
+/* 投稿ボタンとユーザー名を縦並び・中央揃えに */
+header .nav-user-stack {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    line-height: 1.2;
+}
+
+header .nav-user-stack .nav-username {
+    font-size: 0.8em;
+    color: #666;
+    font-weight: normal;
 }
 
 header a,

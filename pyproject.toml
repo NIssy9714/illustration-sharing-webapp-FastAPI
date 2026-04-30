@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["alembic/versions", "flask_legacy", "static", "templates"]
+extend-exclude = ["alembic/versions", "static", "templates"]
 
 [tool.ruff.lint]
 select = [
@@ -27,7 +27,6 @@ check_untyped_defs = true
 warn_unused_ignores = true
 exclude = [
     "alembic/",
-    "flask_legacy/",
     "tests/",
 ]
 

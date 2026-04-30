@@ -33,7 +33,7 @@ FastAPI / SQLAlchemy 2.x / Alembic / Pydantic v2 を中心とした、実務寄�
 - **Pillow** … 画像検証・サムネイル
 - **slowapi** … レート制限
 - **structlog / sentry-sdk** … 構造化ログとエラー監視
-- **SQLite**（開発既定）/ **PostgreSQL**（docker-compose の本番想定）
+- **PostgreSQL 16**（Docker 既定・本番想定）/ **SQLite**（ローカル試用・テスト用フォールバック）
 
 ---
 
@@ -61,7 +61,6 @@ portfolio_fastapi/
 │   ├── env.py
 │   └── versions/
 ├── alembic.ini
-├── flask_legacy/            # 旧 Flask 実装（参考用、実行はされない）
 ├── templates/               # Jinja2 テンプレート（SSR ページ）
 ├── static/                  # CSS・アップロード画像（uploads/・thumbs/）
 ├── tests/                   # pytest 統合テスト
@@ -78,57 +77,35 @@ portfolio_fastapi/
 
 ## セットアップ
 
-### 必要要件
-
-- Python 3.10 以上
-- pip
-
-### インストール
-
-1. リポジトリをクローン
+クローンしたら `.env.example` を `.env` にコピーして `SECRET_KEY` 等を編集（実値はコミットしない）。
 
 ```bash
 git clone https://github.com/NIssy9714/illustration-sharing-webapp-FastAPI.git
 cd illustration-sharing-webapp-FastAPI
+cp .env.example .env
 ```
 
-2. 仮想環境を作成・有効化
+起動方法は **Docker（推奨）** と **ローカル直接起動** の 2 通り。
+
+### 1. Docker で起動（推奨）
+
+PostgreSQL を含むフルスタックがそのまま立ち上がる。本番想定の構成で動作確認できる。
+
+```bash
+docker compose up --build
+```
+
+詳細は [Docker での実行](#docker-での実行) 参照。
+
+### 2. ローカルで起動（SQLite フォールバック）
+
+Docker 不要。`DATABASE_URL` 未設定なら SQLite が自動で `database.db` を生成する。手早く触りたい場合向け。
 
 ```bash
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-```
-
-3. 依存パッケージをインストール
-
-```bash
+.venv\Scripts\activate          # Windows（macOS/Linux: source .venv/bin/activate）
 pip install -r requirements.txt
-```
-
-4. 環境変数を設定
-
-```bash
-cp .env.example .env
-# .env を開いて SECRET_KEY などを編集（実値はコミットしない）
-```
-
----
-
-## 使用方法
-
-### サーバー起動
-
-```bash
 python main.py
-```
-
-または
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 サーバーは `http://localhost:8000` で起動する。
@@ -175,7 +152,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET | `/search?query=...` | 投稿をタイトル検索 |
+| GET | `/api/search?query=...` | 投稿をタイトル検索（JSON API） |
+
+> 画面用の検索ページは `/search`（SSR）。JSON API は `/api/search` に分離している。
 
 ### サンプルリクエスト
 
@@ -262,7 +241,7 @@ CREATE TABLE likes (
 |------|------|
 | `APP_ENV` | `dev` / `prod` / `test` |
 | `SECRET_KEY` | JWT 署名鍵。本番は `openssl rand -hex 32` で生成 |
-| `DATABASE_URL` | 既定 `sqlite:///./database.db`、Postgres は `postgresql+psycopg://...` |
+| `DATABASE_URL` | Docker は `postgresql+psycopg://...`（compose で自動設定）、ローカル既定は `sqlite:///./database.db` |
 | `ALLOWED_ORIGINS` | CORS 許可オリジン（カンマ区切り、`*` 不可） |
 | `COOKIE_SECURE` / `COOKIE_SAMESITE` | Cookie のセキュリティ属性 |
 | `SENTRY_DSN` | 任意。設定時のみ Sentry を有効化 |
@@ -315,17 +294,12 @@ pytest -q       # 簡易出力
 
 ---
 
-## レガシーコード
-
-旧 Flask 実装は `flask_legacy/` に保存されている（実行されない参考用）。
-
----
-
 ## 設計方針
 
 1. まず動く状態にしてから責務を分離する
 2. フレームワークの "魔法" を追いかけすぎず、処理の流れを自分で追えるようにする
 3. コメント・ドキュメントを充実させ、第三者が理解しやすい状態を保つ
+4. **環境別 DB 戦略** — 本番/Docker は PostgreSQL、ローカル試用とテストは SQLite。`DATABASE_URL` 一本で切替可能とし、Alembic は両方対応（`render_as_batch` で SQLite の ALTER 制約を回避）
 
 ---
 
@@ -350,9 +324,3 @@ pytest -q       # 簡易出力
 - [SQLAlchemy 公式ドキュメント](https://docs.sqlalchemy.org/)
 - [Pydantic 公式ドキュメント](https://docs.pydantic.dev/)
 - [Alembic 公式ドキュメント](https://alembic.sqlalchemy.org/)
-
----
-
-## ライセンス
-
-MIT

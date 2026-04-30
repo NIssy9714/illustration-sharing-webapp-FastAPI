@@ -11,8 +11,10 @@
             <a href="/">TOP</a>
             {% if current_user %}
                 <span class="nav-group">
-                    <a href="/upload">投稿</a>
-                    <span>{{ current_user.username|e }} さん</span>
+                    <span class="nav-user-stack">
+                        <a href="/upload">投稿</a>
+                        <span class="nav-username">{{ current_user.username|e }} さん</span>
+                    </span>
                     <a href="#" id="logout-btn">ログアウト</a>
                 </span>
             {% else %}

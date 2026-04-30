@@ -7,8 +7,8 @@
 ### 変更の主要ポイント
 
 1. **データベースレイヤーの統一**
-   - SQLAlchemy ORM を使用（Flask-SQLAlchemy ではなく）
-   - SQLite データベースは互換性維持
+   - SQLAlchemy ORM 採用（Flask-SQLAlchemy ではなく）
+   - 移行時は SQLite 互換維持。その後 PostgreSQL を Docker 既定に追加
    - モデル定義: `app/db.py`
 
 2. **認証メカニズムの変更**
@@ -39,13 +39,9 @@
        └── search.py
    ```
 
-5. **レガシーコード**
-   - 古い Flask 実装は `flask_legacy/` フォルダに保存
-   - 参考用に保持
-
-6. **Docker 対応**
+5. **Docker 対応**
    - `Dockerfile` - FastAPI に対応
-   - `docker-compose.yml` - SQLite ベースの簡潔な設定に変更
+   - `docker-compose.yml` - `api`（FastAPI）+ `db`（PostgreSQL 16）の 2 サービス構成
 
 ### 技術的な改善
 
@@ -76,9 +72,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 注意事項
 
-- テンプレート (`templates/`) はまだ Flask 用
-- 本アプリケーションは REST API のため、フロントエンド（SPA）は別途開発が必要
 - 本番環境では `.env` ファイルの `SECRET_KEY` を変更してください
+- 本ドキュメントは移行作業の記録。最新のセットアップ・設計方針は `README.md` を参照
 
 ---
 
