@@ -21,7 +21,7 @@
         {% endif %}
         <button class="like-btn" onclick="toggleLike({{ post.id }})">❤ Like</button>
         <span class="like-count" id="like-count-{{ post.id }}">{{ like_counts[post.id] }} いいね</span>
-        {% if current_user and (current_user.id == post.user_id or current_user.username == 'admin') %}
+        {% if current_user and (current_user.id == post.user_id or current_user.is_admin) %}
         <button class="delete-btn" style="color:#c00;" onclick="deletePost({{ post.id }})">削除</button>
         {% endif %}
     </article>

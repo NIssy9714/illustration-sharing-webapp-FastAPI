@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -51,6 +52,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
+    # 管理者フラグ。username 文字列ではなくこのフラグで認可判定する
+    is_admin = Column(Boolean, nullable=False, default=False, server_default="0")
 
 
 class Post(Base):

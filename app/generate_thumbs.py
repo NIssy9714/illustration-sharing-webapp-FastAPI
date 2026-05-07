@@ -13,7 +13,8 @@ import os
 
 from PIL import Image
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# このファイルは app/ 配下にあるため、プロジェクトルートに到達するには 2 段上に上がる必要がある
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads")
 THUMBNAIL_DIR = os.path.join(UPLOAD_DIR, "thumbs")
 

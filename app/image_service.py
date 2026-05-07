@@ -65,9 +65,21 @@ def _ensure_saveable_mode(image: Image.Image) -> Image.Image:
     return image
 
 
+def _strip_metadata(image: Image.Image) -> Image.Image:
+    """EXIF/ICC など付随メタデータを除去した新しい画像を返す。
+
+    投稿画像経由で位置情報・端末情報・撮影時刻などを公開しないための防御。
+    `Image.new` + `paste` で info dict を引き継がない fresh な画像を作る。
+    """
+    clean = Image.new(image.mode, image.size)
+    clean.paste(image)
+    return clean
+
+
 def _save_image(image: Image.Image, filepath: str) -> None:
-    """画像を指定パスに保存（モード変換は _ensure_saveable_mode に委譲）."""
+    """画像を指定パスに保存（モード変換 + メタデータ除去）."""
     image_to_save = _ensure_saveable_mode(image)
+    image_to_save = _strip_metadata(image_to_save)
     image_to_save.save(filepath)
 
 
@@ -84,6 +96,7 @@ def create_thumbnail(
     thumbnail_image.thumbnail(size)
     if thumbnail_image.mode in ("RGBA", "P"):
         thumbnail_image = thumbnail_image.convert("RGB")
+    thumbnail_image = _strip_metadata(thumbnail_image)
     thumbnail_image.save(thumbnail_path)
     return thumbnail_path
 

@@ -20,9 +20,9 @@ from app.schemas import UserLogin, UserRegister, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-settings = get_settings()
-ALGORITHM = "HS256"
-COOKIE_NAME = "access_token"
+settings = get_settings()  # 設定はモジュールレベルで取得して使い回す。頻繁にアクセスするため、毎回 get_settings() を呼ぶのは非効率
+ALGORITHM = "HS256"  # JWT の署名アルゴリズム。HS256 は HMAC-SHA256 で、対称鍵を使用する。セキュリティ的には十分だが、将来的に必要に応じて変更する可能性もあるため定数化している
+COOKIE_NAME = "access_token"  # 認証トークンを保存する Cookie の名前。フロントエンドでこの名前を参照してトークンを取得するため、変更する場合はフロントエンド側も合わせて修正が必要
 
 
 # ==============================================================================
@@ -55,15 +55,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """アクセストークンを作成."""
-    to_encode = data.copy()
+    to_encode = data.copy()  # 引数の data を直接変更しないようにコピーを作成。これにより、呼び出し元で同じ辞書を再利用している場合でも、トークンの有効期限を追加しても問題が起きないようになる
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = (
+            datetime.now(timezone.utc) + expires_delta
+        )  # トークンの有効期限を現在時刻 + expires_delta に設定。UTC タイムゾーンで扱うことで、サーバーのローカルタイムゾーンに依存せず一貫した時間管理ができるようになる
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.access_token_expire_minutes,
-        )
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+        expire = (
+            datetime.now(timezone.utc)
+            + timedelta(
+                minutes=settings.access_token_expire_minutes,
+            )
+        )  # expires_delta が指定されない場合は、設定ファイルで定義されたデフォルトの有効期限を使用する。これにより、トークンの有効期限を柔軟に設定できるようになる
+    to_encode.update(
+        {"exp": expire}
+    )  # JWT の標準クレーム "exp" に有効期限をセット。これにより、トークンの有効期限切れを JWT ライブラリ側で自動的に検出できるようになる
+    return jwt.encode(
+        to_encode, settings.secret_key, algorithm=ALGORITHM
+    )  # JWT を生成。ペイロードにユーザー ID などの情報を入れて署名する
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
@@ -77,11 +86,13 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
         path="/",
-    )
+    )  # Cookie を設定。max_age は秒単位で指定する必要があるため、分単位の設定値を 60 倍している。httponly=True にすることで JavaScript からアクセスできないようにし、セキュリティを向上させている。secure と samesite は設定ファイルで定義された値を使用しているため、環境に応じて柔軟に変更できるようになっている
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    response.delete_cookie(
+        key=COOKIE_NAME, path="/"
+    )  # Cookie を削除。path を指定することで、同じパスで設定された Cookie を確実に削除できるようにしている
 
 
 # ==============================================================================

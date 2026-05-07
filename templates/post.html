@@ -18,7 +18,7 @@
         <button id="like-btn" onclick="toggleLike({{ post.id }})">❤ Like</button>
         <p id="like-count">{{ like_count }} いいね</p>
 
-        {% if current_user and (current_user.id == post.user_id or current_user.username == 'admin') %}
+        {% if current_user and (current_user.id == post.user_id or current_user.is_admin) %}
         <button id="delete-btn" style="color:#c00;" onclick="deletePost({{ post.id }})">削除</button>
         {% endif %}
     </div>

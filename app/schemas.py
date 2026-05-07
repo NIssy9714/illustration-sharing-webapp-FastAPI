@@ -13,11 +13,28 @@ from pydantic import BaseModel, Field, field_validator
 # ==============================================================================
 
 
+RESERVED_USERNAMES = {
+    "admin",
+    "administrator",
+    "root",
+    "system",
+}  # 予約ユーザー名（大文字小文字無視）
+
+
 class UserRegister(BaseModel):
     """ユーザー登録リクエストスキーマ."""
 
     username: str = Field(..., min_length=1, max_length=255)
     password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("username")  # username フィールドのバリデーションを定義
+    @classmethod  # クラスメソッドとして定義（インスタンス化せずに呼び出せるようにするため）
+    def validate_username(cls, username):  # username を引数に取るバリデーション関数
+        """予約ユーザー名（admin など）の登録を大文字小文字無視で拒否."""
+        # 認可判定を username に依存しているため、なりすまし登録を防ぐ
+        if username.strip().lower() in RESERVED_USERNAMES:
+            raise ValueError("このユーザー名は使用できません")
+        return username
 
     @field_validator("password")
     @classmethod
