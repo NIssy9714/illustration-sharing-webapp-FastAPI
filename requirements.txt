@@ -36,6 +36,10 @@ sentry-sdk[fastapi]==2.18.0
 pytest==8.4.2
 pytest-cov==5.0.0
 httpx==0.28.1
+# E2E（ブラウザ駆動）。`playwright install chromium` を別途実行する
+pytest-playwright==0.5.2
+# OpenAPI 仕様から API 契約テストを自動生成
+schemathesis==3.39.5
 
 # Development
 python-dotenv==1.0.1

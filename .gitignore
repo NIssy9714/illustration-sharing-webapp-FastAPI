@@ -34,6 +34,9 @@ node_modules/
 # Claude Code ローカル設定
 .claude/
 
+# E2E 失敗時のスクリーンショット・動画・トレース
+tests/e2e/artifacts/
+
 # アップロード画像（個人物のため除外、.gitkeep のみ追跡）
 static/uploads/*
 !static/uploads/.gitkeep

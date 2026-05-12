@@ -36,3 +36,6 @@ addopts = "-ra"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+markers = [
+    "e2e: ブラウザ駆動の E2E テスト（pytest-playwright を使用）",
+]
