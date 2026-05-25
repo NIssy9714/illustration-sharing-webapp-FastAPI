@@ -138,14 +138,24 @@ app.add_middleware(
     CORSMiddleware,  # ブラウザの同一オリジンポリシーを越えて他ドメインからのアクセスを許可する仕組み
     allow_origins=settings.allowed_origins_list,  # 許可するオリジンの一覧。"*" にすると全許可だが credentials と併用不可なので明示列挙が安全
     allow_credentials=True,  # Cookie や Authorization ヘッダの送信を許可。ログイン状態を跨ぐなら必須
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],  # 許可する HTTP メソッド。PUT/PATCH を使わないなら入れない方が攻撃面が減る
-    allow_headers=["Authorization", "Content-Type"],  # 許可するリクエストヘッダ。JWT 用の Authorization と JSON 用 Content-Type を最小限で許可
+    allow_methods=[
+        "GET",
+        "POST",
+        "DELETE",
+        "OPTIONS",
+    ],  # 許可する HTTP メソッド。PUT/PATCH を使わないなら入れない方が攻撃面が減る
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+    ],  # 許可するリクエストヘッダ。JWT 用の Authorization と JSON 用 Content-Type を最小限で許可
 )
 
 # static ファイルをマウント
 app.mount(
     "/static",  # URL のプレフィックス。/static/xxx.png のようにアクセスされる
-    StaticFiles(directory=os.path.join(BASE_DIR, "static")),  # 実ファイルが置かれるディレクトリ。ここを直接配信する
+    StaticFiles(
+        directory=os.path.join(BASE_DIR, "static")
+    ),  # 実ファイルが置かれるディレクトリ。ここを直接配信する
     name="static",  # url_for("static", path=...) でテンプレート側から逆引きできる名前
 )
 
@@ -157,7 +167,9 @@ app.mount(
 
 app.include_router(auth.router)  # /auth/register, /auth/login など認証系のエンドポイント群を登録
 app.include_router(posts.router)  # /posts 配下の投稿 CRUD・いいね操作のエンドポイント群を登録
-app.include_router(search.router)  # /search の検索 API（JSON 応答）を登録。テンプレート版の /search とは別物
+app.include_router(
+    search.router
+)  # /search の検索 API（JSON 応答）を登録。テンプレート版の /search とは別物
 
 
 # ==============================================================================
@@ -170,7 +182,9 @@ def _build_user_context(
 ) -> dict:  # 関数名先頭の _ は「内部用、外から呼ばないでね」の慣習。-> dict は戻り値の型ヒント
     """テンプレートに渡す current_user 情報を組み立てる."""
     if user is None:  # 未ログインの場合。get_optional_user が None を返したケース
-        return {"current_user": None}  # テンプレート側で {% if current_user %} で分岐できるよう None を明示
+        return {
+            "current_user": None
+        }  # テンプレート側で {% if current_user %} で分岐できるよう None を明示
     return {
         "current_user": {  # ORM オブジェクトをそのまま渡さず、必要な値だけ辞書化。テンプレートに余計な属性を露出させない安全策
             "id": user.id,
@@ -183,14 +197,20 @@ def _build_user_context(
 @app.get("/")  # GET / にアクセスが来た時に呼ばれる関数を登録するデコレーター。トップページ
 def index(
     request: Request,  # FastAPI が自動で渡す。テンプレートに渡すと url_for などが使える
-    db: Session = Depends(get_db),  # Depends は依存性注入。get_db が yield した DB セッションを受け取る。リクエスト終了時に自動 close
-    current_user=Depends(get_optional_user),  # 「optional」=ログイン中なら User、未ログインなら None。/ はゲストでも見られるので必須にしない
+    db: Session = Depends(
+        get_db
+    ),  # Depends は依存性注入。get_db が yield した DB セッションを受け取る。リクエスト終了時に自動 close
+    current_user=Depends(
+        get_optional_user
+    ),  # 「optional」=ログイン中なら User、未ログインなら None。/ はゲストでも見られるので必須にしない
 ):
     posts = (
         db.query(Post).order_by(desc(Post.created_at)).all()
     )  # 全投稿を作成日時の降順（新→古）で取得。.all() でリストとして確定
     like_counts = {  # 投稿 ID → いいね数 の辞書を作る
-        post.id: db.query(Like).filter(Like.post_id == post.id).count()  # 各投稿について、紐付く Like 行数を数える
+        post.id: db.query(Like)
+        .filter(Like.post_id == post.id)
+        .count()  # 各投稿について、紐付く Like 行数を数える
         for post in posts  # ※ 投稿数だけクエリが走る (N+1 問題)。本番規模では JOIN 集計に置き換えるのが定石
     }
     return templates.TemplateResponse(
@@ -204,11 +224,16 @@ def index(
     )
 
 
-@app.get("/login")  # ログインフォーム表示専用。実際のログイン処理は POST /auth/login（routers/auth.py）が担当
+@app.get(
+    "/login"
+)  # ログインフォーム表示専用。実際のログイン処理は POST /auth/login（routers/auth.py）が担当
 def login_page(request: Request, current_user=Depends(get_optional_user)):
     return templates.TemplateResponse(
         "login.html",  # フォーム HTML。送信先は /auth/login
-        {"request": request, **_build_user_context(current_user)},  # ヘッダー表示のため current_user は渡しておく
+        {
+            "request": request,
+            **_build_user_context(current_user),
+        },  # ヘッダー表示のため current_user は渡しておく
     )
 
 
@@ -259,9 +284,7 @@ def search_page(
     )
 
 
-@app.get(
-    "/post/{id}"
-)  # {id} はパスパラメータ。/post/42 のように URL の一部として値が渡る
+@app.get("/post/{id}")  # {id} はパスパラメータ。/post/42 のように URL の一部として値が渡る
 def post_page(
     request: Request,
     id: int,  # パスパラメータと同名の引数で受け取る。型 int 指定で自動的に整数変換 + 不正値は 422 エラー

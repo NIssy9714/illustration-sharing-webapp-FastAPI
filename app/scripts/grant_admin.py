@@ -18,8 +18,9 @@ from dotenv import (
 # settings 読み込み前に .env を環境変数に展開
 load_dotenv()  # .env を読み込んで os.environ に反映。app.db の import で settings が評価される前にやる必要がある
 
-from app.db import SessionLocal, User  # noqa: E402  # noqa: E402 = 「import が先頭にない」警告を黙らせる指示。load_dotenv より後に書く理由があるため
-from app.routers.auth import hash_password  # noqa: E402  # bcrypt で平文パスワードをハッシュ化する関数。DB には絶対に平文を保存しない
+# load_dotenv() 後に import するのが必須なため、E402/I001 はファイル単位で抑止（pyproject.toml）
+from app.db import SessionLocal, User
+from app.routers.auth import hash_password
 
 
 def grant_admin(
@@ -30,7 +31,9 @@ def grant_admin(
         "ADMIN_BOOTSTRAP_PASSWORD"
     )  # .get() は未設定なら None を返す。os.environ[...] だと KeyError になるので安全な取得方法
 
-    db = SessionLocal()  # DB セッションを生成。SessionLocal は app.db で定義されたセッションファクトリ
+    db = (
+        SessionLocal()
+    )  # DB セッションを生成。SessionLocal は app.db で定義されたセッションファクトリ
     try:  # try/finally で「成功失敗にかかわらず必ず close する」を保証 (リソースリーク防止)
         existing_user = (
             db.query(User).filter(User.username == username).first()
@@ -48,7 +51,9 @@ def grant_admin(
             return
 
         # 新規作成にはパスワードが必須
-        if not bootstrap_password:  # 環境変数が未設定なら新規作成不可。空文字列も None もここで弾ける
+        if (
+            not bootstrap_password
+        ):  # 環境変数が未設定なら新規作成不可。空文字列も None もここで弾ける
             print(
                 "ADMIN_BOOTSTRAP_PASSWORD が未設定のため新規作成できません。"
                 ".env に設定してから再実行してください。",
@@ -63,9 +68,7 @@ def grant_admin(
             ),  # 必ずハッシュ化してから保存。平文保存は重大なセキュリティ事故になる
             is_admin=True,
         )
-        db.add(
-            new_user
-        )  # セッションに登録。この時点ではまだ DB に書き込まれていない (保留状態)
+        db.add(new_user)  # セッションに登録。この時点ではまだ DB に書き込まれていない (保留状態)
         db.commit()  # ここで実際に INSERT 文が走る
         print(f"[create] {username} を admin として新規作成しました")
     finally:
@@ -73,13 +76,13 @@ def grant_admin(
 
 
 def main() -> None:
-    if (
-        len(sys.argv) != 2
-    ):  # sys.argv[0] はスクリプト名なので、引数 1 個 = 全体で 2 要素という慣習
+    if len(sys.argv) != 2:  # sys.argv[0] はスクリプト名なので、引数 1 個 = 全体で 2 要素という慣習
         print("Usage: python -m app.scripts.grant_admin <username>", file=sys.stderr)
         sys.exit(2)  # 終了コード 2 は慣例的に「使い方の誤り」を表す (1 と区別)
     grant_admin(sys.argv[1])  # 第一引数をユーザー名として渡す
 
 
-if __name__ == "__main__":  # このファイルが「直接実行された時だけ」main() を呼ぶ。import された時は実行されない定番イディオム
+if (
+    __name__ == "__main__"
+):  # このファイルが「直接実行された時だけ」main() を呼ぶ。import された時は実行されない定番イディオム
     main()

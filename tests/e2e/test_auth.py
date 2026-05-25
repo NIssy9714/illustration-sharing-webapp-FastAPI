@@ -87,9 +87,7 @@ def test_login_failure_shows_error_message(
     expect(page).to_have_url(re.compile(r"/login$"))
 
 
-def test_upload_page_guides_unauthenticated_users(
-    page: Page, e2e_server_url: str
-) -> None:
+def test_upload_page_guides_unauthenticated_users(page: Page, e2e_server_url: str) -> None:
     """未ログインで /upload を開いたら、フォームではなくログイン誘導が出る仕様を確認。"""
     page.goto(f"{e2e_server_url}/upload")
     # 「ログイン」リンクが表示されていること

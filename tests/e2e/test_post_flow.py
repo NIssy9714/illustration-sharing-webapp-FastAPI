@@ -66,7 +66,7 @@ def test_create_post_with_image_and_view_detail(
 
     # 4. 詳細ページへ遷移して内容を確認
     page.get_by_role("link", name=title).first.click()
-    expect(page).to_have_url(re.compile(r"/post/\d+$"))     # /post/123 形式
+    expect(page).to_have_url(re.compile(r"/post/\d+$"))  # /post/123 形式
     expect(page.locator("h2")).to_contain_text(title)
     # <figure> 内に <img> が 1 つだけ描画されている（サムネイルではなく本体画像）
     expect(page.locator("figure img")).to_have_count(1)

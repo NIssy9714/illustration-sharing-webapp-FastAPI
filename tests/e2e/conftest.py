@@ -63,9 +63,7 @@ def _wait_until_healthy(base_url: str, timeout: float = 30.0) -> None:
         except Exception as exception:
             last_exception = exception
         time.sleep(0.3)  # 0.3 秒待ってから再試行
-    raise RuntimeError(
-        f"E2E サーバが {timeout}s 以内に起動しませんでした: {last_exception!r}"
-    )
+    raise RuntimeError(f"E2E サーバが {timeout}s 以内に起動しませんでした: {last_exception!r}")
 
 
 @pytest.fixture(scope="session")
@@ -118,10 +116,10 @@ def e2e_server_url() -> str:
             "--log-level",
             "warning",
         ],
-        cwd=str(PROJECT_ROOT),       # uvicorn の作業ディレクトリをプロジェクトルートに
+        cwd=str(PROJECT_ROOT),  # uvicorn の作業ディレクトリをプロジェクトルートに
         env=environment_variables,
-        stdout=subprocess.DEVNULL,   # 標準出力を捨てる（テストログを汚さない）
-        stderr=subprocess.DEVNULL,   # 標準エラーも同様
+        stdout=subprocess.DEVNULL,  # 標準出力を捨てる（テストログを汚さない）
+        stderr=subprocess.DEVNULL,  # 標準エラーも同様
     )
 
     try:
@@ -197,9 +195,9 @@ def tiny_png_bytes() -> bytes:
     Pillow（PIL）でメモリ上に PNG を作って返す。
     """
     image = Image.new("RGB", (200, 200), color=(255, 0, 0))  # 赤色 RGB(255,0,0)
-    buffer = io.BytesIO()                # メモリ上の仮想ファイル
-    image.save(buffer, format="PNG")     # 仮想ファイルへ PNG として書き出し
-    return buffer.getvalue()             # バイト列として取り出し
+    buffer = io.BytesIO()  # メモリ上の仮想ファイル
+    image.save(buffer, format="PNG")  # 仮想ファイルへ PNG として書き出し
+    return buffer.getvalue()  # バイト列として取り出し
 
 
 @pytest.fixture

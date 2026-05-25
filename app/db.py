@@ -39,9 +39,7 @@ settings = get_settings()
 # SQLite はデフォルトで「接続を作ったスレッド以外からの利用」を拒否する。
 # FastAPIは複数スレッドでリクエストを捌くため、この制限を外さないとエラーになる。
 # PostgreSQL等は元々マルチスレッド対応なので、この引数を渡してはいけない（未知引数として弾かれる）。
-_connect_args = (
-    {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-)
+_connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 # 【engine とは】
 # DBへの「接続プール本体」。アプリ全体で1つだけ作り、使い回す。
 # echo=False は SQLログ出力を抑制（True にするとデバッグ時に発行SQLが見える）。
@@ -130,9 +128,7 @@ class Like(Base):
     # 同時押下(race condition) で2件insertされる可能性がある。
     # DBの複合UNIQUE で「(user_id, post_id) の組合せは1行だけ」を強制し、
     # 二重いいねを物理的に不可能にする。
-    __table_args__ = (
-        UniqueConstraint("user_id", "post_id", name="uq_likes_user_post"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "post_id", name="uq_likes_user_post"),)
 
     # 【なぜ id を別途持つか】
     # (user_id, post_id) の複合主キーでも論理上は同じだが、

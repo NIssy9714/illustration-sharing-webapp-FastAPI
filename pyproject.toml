@@ -19,6 +19,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]
+# grant_admin は load_dotenv() を import の間に挟む必要があり、isort/E402 と構造的に競合する
+"app/scripts/grant_admin.py" = ["E402", "I001"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -38,4 +40,11 @@ filterwarnings = [
 ]
 markers = [
     "e2e: ブラウザ駆動の E2E テスト（pytest-playwright を使用）",
+]
+
+[tool.coverage.run]
+# 単体実行のユーティリティスクリプトは coverage 対象から外す（運用ツールでテスト価値が低い）
+omit = [
+    "app/scripts/*",
+    "app/generate_thumbs.py",
 ]

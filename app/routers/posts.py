@@ -38,9 +38,7 @@ def get_posts(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
     """投稿一覧を取得。最新順."""
     limit = max(1, min(limit, 100))
     offset = max(0, offset)
-    return (
-        db.query(Post).order_by(desc(Post.created_at)).offset(offset).limit(limit).all()
-    )
+    return db.query(Post).order_by(desc(Post.created_at)).offset(offset).limit(limit).all()
 
 
 @router.get("/{post_id}", response_model=PostWithLikes)
@@ -125,9 +123,7 @@ def like_post(
         )
 
     existing_like = (
-        db.query(Like)
-        .filter(Like.user_id == current_user.id, Like.post_id == post_id)
-        .first()
+        db.query(Like).filter(Like.user_id == current_user.id, Like.post_id == post_id).first()
     )
 
     if existing_like:

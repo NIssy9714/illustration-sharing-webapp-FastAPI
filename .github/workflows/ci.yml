@@ -41,15 +41,18 @@ jobs:
 
       - name: Ruff (format check)
         run: ruff format --check .
-        continue-on-error: true
 
+      # mypy は段階導入中（continue-on-error 維持）。SQLAlchemy 1.x の Column[T] 型推論問題が
+      # 大半で、根本解決には `Mapped[]` (SQLAlchemy 2.0 style) への移行が必要。
+      # ruff（lint + format）は厳格にゲート化済み。
       - name: Mypy (type check)
         run: mypy app
         continue-on-error: true
 
       # E2E は別ジョブで動かすため除外
+      # --cov-fail-under=70 でカバレッジゲートを設ける（70% 未満で CI 失敗）
       - name: Pytest with coverage
-        run: pytest --ignore=tests/e2e --cov=app --cov-report=term-missing --cov-report=xml -q
+        run: pytest --ignore=tests/e2e --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=70 -q
 
       - name: Upload coverage artifact
         if: always()
