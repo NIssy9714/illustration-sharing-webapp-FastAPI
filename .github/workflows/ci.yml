@@ -16,7 +16,7 @@ jobs:
 
     env:
       SECRET_KEY: ci-secret-key
-      DATABASE_URL: sqlite+pysqlite:///:memory:
+      DATABASE_URL: "sqlite+pysqlite:///:memory:"
       APP_ENV: ci
 
     steps:
