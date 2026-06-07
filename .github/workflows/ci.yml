@@ -168,6 +168,7 @@ jobs:
       - name: Run schemathesis
         run: |
           schemathesis run http://127.0.0.1:8000/openapi.json \
+            --experimental=openapi-3.1 \
             --checks=response_schema_conformance,content_type_conformance \
             --hypothesis-max-examples=20 \
             --validate-schema=false \
