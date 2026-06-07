@@ -95,6 +95,9 @@ def e2e_server_url() -> str:
             # 通常起動と同じ "dev" にしてテーブル自動作成を行わせる
             "APP_ENV": "dev",
             "ALLOWED_ORIGINS": base_url,
+            # E2E は同一 IP から短時間に多数の登録/ログインを行うため、
+            # レート制限（register 5/min 等）を無効化して 429 による誤検知を防ぐ
+            "RATELIMIT_ENABLED": "false",
             # E2E は HTTP（HTTPS ではない）で動かすので Cookie の Secure 属性を外す
             "COOKIE_SECURE": "false",
             "COOKIE_SAMESITE": "lax",
@@ -218,6 +221,6 @@ def register_user(page, e2e_server_url, valid_password):
         # 成功時に location.href = '/' でトップへ遷移する。
         # その遷移完了を expect_navigation で待つ。
         with page.expect_navigation(url=f"{e2e_server_url}/"):
-            page.click('button[type="submit"]')
+            page.click('#register-form button[type="submit"]')
 
     return _register

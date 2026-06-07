@@ -19,7 +19,7 @@ from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.limiter import limiter
+from app.core.limiter import limiter, rate_limit_exempt
 from app.db import Like, Post, User, get_db
 from app.image_service import process_uploaded_image
 from app.routers.auth import get_current_user
@@ -64,7 +64,7 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("20/minute")
+@limiter.limit("20/minute", exempt_when=rate_limit_exempt)
 async def create_post(
     request: Request,
     title: str = Form(..., min_length=1, max_length=255),
@@ -107,7 +107,7 @@ async def create_post(
 
 
 @router.post("/{post_id}/like", response_model=LikeResponse)
-@limiter.limit("60/minute")
+@limiter.limit("60/minute", exempt_when=rate_limit_exempt)
 def like_post(
     request: Request,
     post_id: int,

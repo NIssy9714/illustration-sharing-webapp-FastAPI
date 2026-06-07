@@ -30,7 +30,7 @@ def test_register_then_logout(
     page.fill('input[name="username"]', unique_username)
     page.fill('input[name="password"]', valid_password)
     with page.expect_navigation(url=f"{e2e_server_url}/"):
-        page.click('button[type="submit"]')
+        page.click('#register-form button[type="submit"]')
 
     # 3. ナビゲーション領域に自分のユーザー名が出ていればログイン成功
     expect(page.locator(".nav-username")).to_contain_text(unique_username)
@@ -61,7 +61,7 @@ def test_login_with_existing_user(
     page.fill('input[name="username"]', unique_username)
     page.fill('input[name="password"]', valid_password)
     with page.expect_navigation(url=f"{e2e_server_url}/"):
-        page.click('button[type="submit"]')
+        page.click('#login-form button[type="submit"]')
 
     # 4. ナビゲーションに自分のユーザー名が表示されていれば成功
     expect(page.locator(".nav-username")).to_contain_text(unique_username)
@@ -76,7 +76,7 @@ def test_login_failure_shows_error_message(
     page.goto(f"{e2e_server_url}/login")
     page.fill('input[name="username"]', unique_username)
     page.fill('input[name="password"]', "WrongPass1!")
-    page.click('button[type="submit"]')
+    page.click('#login-form button[type="submit"]')
 
     # ページ遷移はせず、#error-msg にエラーが表示されるはず
     error_message_element = page.locator("#error-msg")
@@ -90,7 +90,8 @@ def test_login_failure_shows_error_message(
 def test_upload_page_guides_unauthenticated_users(page: Page, e2e_server_url: str) -> None:
     """未ログインで /upload を開いたら、フォームではなくログイン誘導が出る仕様を確認。"""
     page.goto(f"{e2e_server_url}/upload")
-    # 「ログイン」リンクが表示されていること
-    expect(page.get_by_role("link", name="ログイン")).to_be_visible()
+    # 案内文（段落）内に「ログイン」リンクが表示されていること
+    # ※ヘッダーのナビにも同名リンクがあるため、段落にスコープして一意に特定する
+    expect(page.get_by_role("paragraph").get_by_role("link", name="ログイン")).to_be_visible()
     # 投稿フォーム（id="upload-form"）は描画されていないはず（要素数 0）
     expect(page.locator("#upload-form")).to_have_count(0)

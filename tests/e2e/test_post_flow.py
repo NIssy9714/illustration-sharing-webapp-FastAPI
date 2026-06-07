@@ -43,7 +43,7 @@ def _create_post(
             ],
         )
     with page.expect_navigation(url=f"{e2e_server_url}/"):
-        page.click('button[type="submit"]')
+        page.click('#upload-form button[type="submit"]')
 
 
 def test_create_post_with_image_and_view_detail(

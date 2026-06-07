@@ -27,7 +27,7 @@ def test_search_finds_matching_title(
     page.fill('input[name="title"]', title)
     page.fill('textarea[name="body"]', "")
     with page.expect_navigation(url=f"{e2e_server_url}/"):
-        page.click('button[type="submit"]')
+        page.click('#upload-form button[type="submit"]')
 
     # 2. ヘッダーの検索フォームにキーワードを入れて検索ボタンを押す
     # username はユニークなので、ヒット 1 件のみが期待される

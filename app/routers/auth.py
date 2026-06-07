@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.limiter import limiter
+from app.core.limiter import limiter, rate_limit_exempt
 from app.db import User, get_db
 from app.schemas import UserLogin, UserRegister, UserResponse
 
@@ -204,7 +204,7 @@ def _issue_token_for(user: User) -> str:
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
+@limiter.limit("5/minute", exempt_when=rate_limit_exempt)
 def register(
     request: Request,
     response: Response,
@@ -244,7 +244,7 @@ def register(
 
 
 @router.post("/login")
-@limiter.limit("10/minute")
+@limiter.limit("10/minute", exempt_when=rate_limit_exempt)
 def login(
     request: Request,
     response: Response,
